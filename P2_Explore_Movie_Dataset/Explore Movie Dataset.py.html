@@ -37,12 +37,13 @@
 # 
 # 提示：记得使用 notebook 中的魔法指令 `%matplotlib inline`，否则会导致你接下来无法打印出图像。
 
-# In[7]:
+# In[62]:
 
 
 import pandas as pd
 import numpy as np
 import seaborn as sb
+import matplotlib.pyplot as plt
 get_ipython().run_line_magic('matplotlib', 'inline')
 movie_data = pd.read_csv('tmdb-movies.csv')
 movie_data.head(1)
@@ -62,7 +63,7 @@ movie_data.head(1)
 # 
 # 
 
-# In[8]:
+# In[63]:
 
 
 movie_data.tail()
@@ -81,14 +82,14 @@ movie_data.describe()
 # 
 # 任务：使用适当的方法来清理空值，并将得到的数据保存。
 
-# In[9]:
+# In[64]:
 
 
 # 丢弃homepage列，因为该列对分析数据并不重要
 movie_data.drop(['homepage'],axis=1,inplace=True)
 
 
-# In[10]:
+# In[65]:
 
 
 # tagline,keywords,production_companies，因为该列对分析数据并不重要
@@ -96,7 +97,7 @@ movie_data.drop(['tagline','keywords','production_companies'],axis=1,inplace=Tru
 movie_data.isnull().sum()
 
 
-# In[11]:
+# In[66]:
 
 
 # 丢弃重复列
@@ -107,7 +108,7 @@ movie_data.drop_duplicates(inplace=True)
 sum(movie_data.duplicated())
 
 
-# In[12]:
+# In[67]:
 
 
 # 丢弃其他的空行
@@ -136,12 +137,12 @@ movie_data.isnull().sum()
 # 
 # 要求：每一个语句只能用一行代码实现。
 
-# In[54]:
+# In[68]:
 
 
 movie_data[['id','popularity','budget','runtime','vote_average']]
-movie_data.iloc[np.r_[1:21,48,49],:]
-movie_data.iloc[50:61,:]['popularity']
+movie_data.iloc[np.r_[0:20,47,48],:]
+movie_data.iloc[49:60,:]['popularity']
 
 
 # ---
@@ -155,7 +156,7 @@ movie_data.iloc[50:61,:]['popularity']
 # 
 # 要求：请使用 Logical Indexing实现。
 
-# In[14]:
+# In[69]:
 
 
 mask_gt_5 = movie_data['popularity'] > 5
@@ -163,7 +164,7 @@ movie_data_pop_gt_5 = movie_data[mask_gt_5]
 movie_data_pop_gt_5.head()
 
 
-# In[16]:
+# In[70]:
 
 
 mask_gt_5_after_1996 = (movie_data['release_year'] >1996) & (movie_data['popularity'] > 5)
@@ -180,7 +181,7 @@ movie_data_pop_gt_5_after_1996.head(1)
 # 
 # 要求：使用 `Groupby` 命令实现。
 
-# In[24]:
+# In[71]:
 
 
 movie_data.groupby('release_year').agg('mean')['revenue']
@@ -206,18 +207,20 @@ movie_data.groupby('director').agg('mean')['popularity'].sort_values(ascending=F
 
 # **任务3.1：**对 `popularity` 最高的20名电影绘制其 `popularity` 值。
 
-# In[25]:
+# In[72]:
 
 
 # 选取popularity最高的20名电影
 top_20_pop=movie_data.sort_values('popularity',ascending=False)[:20]
 
 
-# In[26]:
+# In[73]:
 
 
 # 条形图
 top_20_pop.plot.bar(x='original_title',y='popularity');
+plt.xlabel('original_title')
+plt.ylabel('popularity')
 
 
 # ---
@@ -229,7 +232,7 @@ top_20_pop.plot.bar(x='original_title',y='popularity');
 # ---
 # **任务3.2：**分析电影净利润（票房-成本）随着年份变化的情况，并简单进行分析。
 
-# In[27]:
+# In[74]:
 
 
 # 净利润=票房-成本
@@ -238,78 +241,56 @@ movie_data['interest'] = interest
 movie_data['release_year'].unique()
 
 
-# In[28]:
+# In[75]:
 
 
-# 按年进行排序
-sorted_movie_data=movie_data.sort_values('release_year')
-sorted_movie_data['release_year'].unique()
+mean_interest = movie_data.groupby('release_year').mean()['interest']
+mean_interest.plot.bar(x='release_year',y='interest');
+plt.xlabel('release_year');
+plt.ylabel('interest');
 
 
-# In[29]:
-
-
-# 根据一个没有明确类别的定量变量新建分类变量
-
-# 对用于把数据“分割”成组的边缘进行分组
-bin_edges = [1959, 1969, 1979, 1989, 1999,2009,2019]
-bin_names = ['1960s','1970s','1980s','1990s','2000s','2010s']
-sorted_movie_data['decades'] = pd.cut(sorted_movie_data['release_year'], bin_edges, labels=bin_names)
-
-# 按年代进行分组，并求均值
-mean_interest = sorted_movie_data.groupby('decades').mean()['interest']
-mean_interest
-
-
-# In[63]:
-
-
-mean_interest.plot.bar(x='decades',y='interest');
-
-
-# 从图中可以看出，从1960年代开始，电影净利润逐步上升，到1990年带达到顶峰，随后略有下降。
+# 从图中可以看出，从1960年代开始，电影净利润逐步上升，到1990年代达到顶峰，随后略有下降。
 
 # ---
 # 
 # **[选做]任务3.3：**选择最多产的10位导演（电影数量最多的），绘制他们排行前3的三部电影的票房情况，并简要进行分析。
 
-# In[30]:
+# In[76]:
 
 
+## 拆分导演, 原来数据中单部电影多名导演是用’|’隔开的
+tmp=movie_data['director'].str.split('|',expand=True).stack().reset_index(level=1,drop=True).rename('director')
+movie_data_split = movie_data[['original_title', 'revenue_adj']].join(tmp)
+movie_data_split
+target_data = movie_data_split
+
+## TODO:  整理target_data,  它有上面提到的三个维度
 # 选择最多产的10位导演（电影数量最多的）
-top_10_director = movie_data['director'].value_counts().head(10)
-top_10_director
-
+# 选择最多产的10位导演（电影数量最多的）
+top_10_director = target_data['director'].value_counts().head(10)
 top_10_director_names = top_10_director.index
-top_10_director_names
 
 
-# In[31]:
-
-
-dict_top3 = {}
-
-# 对于每个分组，
-# 1. 取得排名前三（收入）的电影的收入，
-# 2. 对收入行进行转置
-# 3. 并赋予index:{top1,top2,top3}
-# 4. 以导演为key存入字典
-def get_top3(subf):
-    top3 = subf.sort_values(by='revenue', ascending=False)[:3]
-    reshaped_revenue = top3['revenue'].values.reshape(1,3)
-    revenues = pd.Series(data = reshaped_revenue[0], index = ['top1','top2','top3'])
-    dict_top3[subf.name] = revenues
-
+# In[77]:
 
 
 # 绘制他们排行前3的三部电影的票房情况
 top_10_director_names_full_data = movie_data[movie_data['director'].isin(top_10_director_names)]
-#top_10_director_names_full_data
-top_10_director_names_full_data.groupby('director').apply(get_top3)
 
-# 用字典生成df并转置
-top3_df_for_plot = pd.DataFrame(dict_top3).T
-top3_df_for_plot.plot.bar();
+def get_top3(subf):
+    top3 = subf.sort_values(by='revenue_adj', ascending=False)[:3]
+    return top3
+
+top3_top10 = top_10_director_names_full_data.groupby('director').apply(get_top3)
+
+target_data = top3_top10[['original_title','revenue_adj','director']]
+## 作图, 将导演设为颜色维度hue, 达到分别作图的效果
+fig = plt.figure(figsize=(15, 6)) 
+ax = sb.barplot(data=target_data, x='original_title', y='revenue_adj', hue='director', dodge=False, palette="Set2")
+plt.xticks(rotation = 90)
+plt.ylabel('Revenue');
+plt.xlabel('Original Title');
 
 
 # 对于最多产的10位导演，研究他们排行前3的三部电影的票房情况，发现：
@@ -320,13 +301,15 @@ top3_df_for_plot.plot.bar();
 # 
 # **[选做]任务3.4：**分析1968年~2015年六月电影的数量的变化。
 
-# In[32]:
+# In[78]:
 
 
 mask_1968_to_2015 = (movie_data['release_year'] >= 1968) & (movie_data['release_year'] <= 2015)
 movie_data_1968_to_2015 = movie_data.loc[mask_1968_to_2015].sort_values('release_year')
 movie_counts = movie_data_1968_to_2015['release_year'].value_counts()
 movie_counts.sort_index().plot(kind='bar');
+plt.xlabel('release_year');
+plt.ylabel('count of movies');
 
 
 # 从总体上来说，1968年~2015年六月电影的数量呈现逐年递增趋势。
@@ -335,21 +318,21 @@ movie_counts.sort_index().plot(kind='bar');
 # 
 # **[选做]任务3.5：**分析1968年~2015年六月电影 `Comedy` 和 `Drama` 两类电影的数量的变化。
 
-# In[36]:
+# In[79]:
 
 
 #1968年~2015年电影
 movie_data_1968_to_2015.head(1)
 
 
-# In[37]:
+# In[80]:
 
 
 # change data type of 'release_date'
 movie_data_1968_to_2015['release_date'] = pd.to_datetime(movie_data_1968_to_2015['release_date'])
 
 
-# In[38]:
+# In[81]:
 
 
 # get entries with month==6
@@ -358,34 +341,7 @@ movie_data_1968_to_2015_june = movie_data_1968_to_2015[june_mask]
 movie_data_1968_to_2015_june.head(1)
 
 
-# In[39]:
-
-
-# 检查是否有电影同时为Comedy 和 Drama
-genres_mask = (movie_data_1968_to_2015_june['genres'].str.contains('Comedy')) & (movie_data_1968_to_2015_june['genres'].str.contains('Drama'))
-
-movie_data_1968_to_2015_june[genres_mask].shape[0]
-
-
-# In[40]:
-
-
-# 检查是否有电影为Comedy 但不为 Drama
-genres_mask_comedy = (movie_data_1968_to_2015_june['genres'].str.contains('Comedy')) & (~movie_data_1968_to_2015_june['genres'].str.contains('Drama'))
-
-movie_data_1968_to_2015_june[genres_mask_comedy].shape[0]
-
-
-# In[41]:
-
-
-# 检查是否有电影不为Comedy 但为 Drama
-genres_mask_drama = (~movie_data_1968_to_2015_june['genres'].str.contains('Comedy')) & (movie_data_1968_to_2015_june['genres'].str.contains('Drama'))
-
-movie_data_1968_to_2015_june[genres_mask_drama].shape[0]
-
-
-# In[125]:
+# In[82]:
 
 
 # outer join on release_year
@@ -398,12 +354,14 @@ drama.rename(columns={'genres':'Drama'}, inplace=True)
 result = pd.merge(comedy, drama, how='outer',on='release_year')
 
 
-# In[129]:
+# In[83]:
 
 
 # change 
 result.fillna(0, inplace=True)
 result.sort_index().plot();
+plt.xlabel('release_year');
+plt.ylabel('count of movies');
 
 
 # 总体来说，1968年~2015年六月，Comedy类和Drama类的电影数量呈上升趋势。在上世纪90年代末期更是数量猛增，之前增长并不明显。
